@@ -10,7 +10,8 @@ model = joblib.load('stroke_model.pkl')
 def home():
     return "<h1>Welcome to Stroke Predictor App 🚀</h1><p>App is running successfully on Render!</p>"
 
-@app.route('/predict', methods=['POST'])
+@app.route('/', methods=['POST'])
+
 def predict():
     data = request.get_json()  # expects JSON input
     input_data = [[
