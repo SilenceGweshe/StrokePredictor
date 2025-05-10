@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import joblib
 import traceback
 
@@ -15,12 +15,13 @@ except Exception as e:
 
 @app.route('/')
 def home():
-    return "<h1>Welcome to Stroke Predictor App 🚀</h1><p>App is running successfully on Render!</p>"
+    # Render the form.html template when the root URL is visited
+    return render_template('form.html')  # form.html should be placed inside the 'templates' folder
 
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        data = request.get_json()
+        data = request.form.to_dict()  # Get form data from the HTML form submission
         print("📦 Incoming data:", data)
 
         # Check for all required fields
@@ -29,20 +30,17 @@ def predict():
             if field not in data:
                 return jsonify({'error': f'Missing field: {field}'}), 400
 
-        # Calculate the extra variable (interaction term)
-        age_glucose_interaction = data['age'] * data['avg_glucose_level']
-
         # Prepare the input data for prediction (including the interaction term)
         input_data = [[
-            data['gender'],
-            data['age'],
-            data['hypertension'],
-            data['heart_disease'],
-            data['work_type'],
-            data['avg_glucose_level'],
-            data['bmi'],
-            data['smoking_status'],
-            data['age'] * data['avg_glucose_level'] 
+            float(data['gender']),
+            float(data['age']),
+            float(data['hypertension']),
+            float(data['heart_disease']),
+            float(data['work_type']),
+            float(data['avg_glucose_level']),
+            float(data['bmi']),
+            float(data['smoking_status']),
+            float(data['age']) * float(data['avg_glucose_level'])  # Add the interaction term
         ]]
 
         print("🔍 Input to model:", input_data)
