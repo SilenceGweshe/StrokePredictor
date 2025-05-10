@@ -13,8 +13,8 @@ except Exception as e:
     traceback.print_exc()
     model = None
 
-@app.route('/')
-def home():
+@app.route('/predict', methods=['POST'])
+def predict():
     return "<h1>Welcome to Stroke Predictor App 🚀</h1><p>App is running successfully on Render!</p>"
 
 @app.route('/', methods=['POST'])
