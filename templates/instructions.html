@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Welcome - Stroke Risk Predictor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f8fb;
+            color: #333;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #0366d6;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #0366d6;
+            color: white;
+            padding: 10px 20px;
+            margin-top: 20px;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+        .btn:hover {
+            background-color: #024a9d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to the Stroke Risk Predictor</h1>
+        <p>This tool helps you assess the likelihood of Ischemic stroke based on key health indicators.</p>
+
+        <h3>How to Use:</h3>
+        <ul>
+            <li>Ensure you're connected to the internet.</li>
+            <li>Click the button below to go to the prediction form.</li>
+            <li>Fill in all required details (like age, BMI, glucose level, etc.).</li>
+            <li>Click "Predict" to get your stroke risk assessment.</li>
+        </ul>
+
+        <h3>Troubleshooting</h3>
+        <ul>
+            <li>If the app doesn't load, refresh your browser or try a different one.</li>
+            <li>If prediction fails, ensure all fields are filled correctly.</li>
+        </ul>
+
+        <h3>Need Help?</h3>
+        <p>
+            Contact: <strong>silencegweshe8@gmail.com</strong><br>
+            Phone: <strong>0781112120</strong>
+        </p>
+
+        <a href="{{ url_for('form') }}" class="btn">Start Prediction</a>
+    </div>
+</body>
+</html>
+
