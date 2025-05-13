@@ -95,7 +95,7 @@ def login():
 
         if user and check_password_hash(user[2], password):  # user[2] is the hashed password
             session['username'] = username
-            return redirect(url_for('instructions'))
+            return redirect(url_for('home'))  # Redirect to home page after login
         else:
             error = 'Invalid username or password'
 
@@ -118,21 +118,21 @@ def home():
 @app.route('/')
 def instructions():
     if 'username' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('login'))  # Redirect to login if not logged in
     return render_template('instructions.html')
 
 # 📋 Form page
 @app.route('/form', methods=['GET', 'POST'])
 def form():
     if 'username' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('login'))  # Redirect to login if not logged in
     return render_template('form.html')
 
 # 🤖 Stroke Prediction API
 @app.route('/predict', methods=['POST'])
 def predict():
     if 'username' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('login'))  # Redirect to login if not logged in
     try:
         if request.is_json:
             data = request.get_json()
