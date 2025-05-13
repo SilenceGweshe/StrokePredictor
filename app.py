@@ -12,10 +12,6 @@ load_dotenv()
 # Use the secret key from the .env file
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY')
-# Simulated user database
-users = {
-    "admin": generate_password_hash("admin123")
-}
 
 # Load the trained model
 try:
@@ -30,39 +26,79 @@ except Exception as e:
 def init_db():
     conn = sqlite3.connect('stroke_predictions.db')
     cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS predictions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            age REAL,
-            hypertension INTEGER,
-            heart_disease INTEGER,
-            avg_glucose_level REAL,
-            bmi REAL,
-            gender TEXT,
-            work_type TEXT,
-            smoking_status TEXT,
-            risk_score REAL,
-            prediction INTEGER,
-            risk_level TEXT
-        )
-    ''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS predictions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        age REAL,
+        hypertension INTEGER,
+        heart_disease INTEGER,
+        avg_glucose_level REAL,
+        bmi REAL,
+        gender TEXT,
+        work_type TEXT,
+        smoking_status TEXT,
+        risk_score REAL,
+        prediction INTEGER,
+        risk_level TEXT
+    )''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT
+    )''')
     conn.commit()
     conn.close()
 
 init_db()
 
-# 🔐 Login page
+# 🔐 Registration Page
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        # Check if the username already exists
+        conn = sqlite3.connect('stroke_predictions.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
+        existing_user = cursor.fetchone()
+        
+        if existing_user:
+            return render_template('register.html', error="Username already exists")
+
+        # Hash the password
+        hashed_password = generate_password_hash(password)
+
+        # Store the new user in the database
+        cursor.execute('INSERT INTO users (username, password) VALUES (?, ?)', (username, hashed_password))
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
+
+# 🔐 Login Page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if username in users and check_password_hash(users[username], password):
+        
+        # Check if user exists in the database
+        conn = sqlite3.connect('stroke_predictions.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
+        user = cursor.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user[2], password):  # user[2] is the hashed password
             session['username'] = username
-            return redirect(url_for('home'))
+            return redirect(url_for('instructions'))
         else:
             error = 'Invalid username or password'
+
     return render_template('login.html', error=error)
 
 # 🔓 Logout
@@ -78,7 +114,7 @@ def home():
         return redirect(url_for('login'))
     return render_template('home.html', username=session['username'])
 
-# 📄 Instructions page
+# 📄 Instructions Page
 @app.route('/')
 def instructions():
     if 'username' not in session:
@@ -127,13 +163,11 @@ def predict():
 
         conn = sqlite3.connect('stroke_predictions.db')
         cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO predictions (
-                age, hypertension, heart_disease, avg_glucose_level,
-                bmi, gender, work_type, smoking_status, risk_score,
-                prediction, risk_level
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
+        cursor.execute('''INSERT INTO predictions (
+            age, hypertension, heart_disease, avg_glucose_level,
+            bmi, gender, work_type, smoking_status, risk_score,
+            prediction, risk_level
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', (
             data['age'], data['hypertension'], data['heart_disease'], data['avg_glucose_level'],
             data['bmi'], data['gender'], data['work_type'], data['smoking_status'],
             risk_score, prediction, risk_level
