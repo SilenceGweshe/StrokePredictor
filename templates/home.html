@@ -1,12 +1,75 @@
-<!-- templates/home.html -->
 <!DOCTYPE html>
 <html>
 <head>
     <title>Home</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #74ebd5, #ACB6E5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+        }
+
+        h2 {
+            margin-top: 20px;
+            color: #333;
+        }
+
+        p {
+            color: #555;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+        }
+
+        .logout-btn button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .logout-btn button:hover {
+            background-color: #45a049;
+        }
+
+        a {
+            text-decoration: none;
+        }
+    </style>
 </head>
 <body>
-    <h2>Welcome, {{ username }}!</h2>
-    <p>You are logged in.</p>
-    <a href="{{ url_for('logout') }}">Logout</a>
+    <div class="container">
+        <div class="logout-btn">
+            <a href="{{ url_for('logout') }}">
+                <button>Logout</button>
+            </a>
+        </div>
+
+       <h2>ISCHEMIC STROKE PREDICTOR </h2>
+
+        <p><a href="{{ url_for('register') }}">Register</a></p>
+        
+    </div>
 </body>
 </html>
+
