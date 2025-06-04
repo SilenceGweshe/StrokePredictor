@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import joblib
 import sqlite3
-import os
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -39,17 +38,14 @@ with get_db_connection() as conn:
             prediction INTEGER
         )
     """)
-    conn.commit()
-
-# Add new column to existing predictions table if it doesn't exist
-with get_db_connection() as conn:
+    # Add new column if it doesn't exist
     try:
         conn.execute("ALTER TABLE predictions ADD COLUMN age_glucose_interaction REAL")
-        conn.commit()
     except sqlite3.OperationalError:
         pass  # column already exists
+    conn.commit()
 
-# Welcome page
+# Home page
 @app.route("/")
 def welcome():
     return render_template("home.html")
@@ -92,12 +88,17 @@ def logout():
     flash("You have been logged out.")
     return redirect(url_for("login"))
 
-# Redirect forgot password to register
+# Forgot password redirect
 @app.route("/forgot_password")
 def forgot_password():
     return redirect(url_for("register"))
 
-# Form page
+# Instructions page
+@app.route("/instructions")
+def instructions():
+    return render_template("instructions.html")
+
+# Form input page
 @app.route("/form")
 def form():
     if "user" not in session:
@@ -112,6 +113,7 @@ def predict():
         flash("Please login first.")
         return redirect(url_for("login"))
 
+    # Get form data
     data = {
         "gender": request.form["gender"],
         "age": float(request.form["age"]),
@@ -123,16 +125,22 @@ def predict():
         "smoking_status": request.form["smoking_status"]
     }
 
+    # Compute interaction term
     age_glucose_interaction = data["age"] * data["avg_glucose_level"]
     input_features = list(data.values()) + [age_glucose_interaction]
 
     # Make prediction
     prediction = model.predict([input_features])[0]
     probability = model.predict_proba([input_features])[0][prediction]
+    confidence = probability  # between 0.0 - 1.0
 
-    if confidence is not None:
-    label = "High Stroke Risk" if confidence >= 70 else "Low Stroke Risk"
+    # Threshold at 0.7 (70%)
+    if confidence >= 0.7 and prediction == 1:
+        label = "High Stroke Risk"
+    else:
+        label = "Low Stroke Risk"
 
+    # Save to DB
     with get_db_connection() as conn:
         conn.execute("""
             INSERT INTO predictions (
@@ -143,13 +151,8 @@ def predict():
         """, tuple(input_features + [prediction]))
         conn.commit()
 
-    return render_template("result.html", prediction=prediction, label=label, confidence=confidence)
+    return render_template("result.html", prediction=prediction, label=label, confidence=round(confidence * 100, 2))
 
-# Instructions page
-@app.route("/instructions")
-def instructions():
-    return render_template("instructions.html")
-
+# Run app
 if __name__ == "__main__":
     app.run(debug=True)
-
