@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 import joblib
 import sqlite3
 import os
+import pandas as pd
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -105,7 +106,7 @@ def form():
         return redirect(url_for("login"))
     return render_template("form.html")
 
-# Prediction route
+# Prediction route (HTML form based)
 @app.route("/predict", methods=["POST"])
 def predict():
     if "user" not in session:
@@ -150,6 +151,38 @@ def predict():
 def instructions():
     return render_template("instructions.html")
 
+# JSON API prediction route
+@app.route("/api/predict", methods=["POST"])
+def api_predict():
+    if "user" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        data = request.json
+        input_data = {
+            "gender": data["gender"],
+            "age": float(data["age"]),
+            "hypertension": int(data["hypertension"]),
+            "heart_disease": int(data["heart_disease"]),
+            "work_type": data["work_type"],
+            "avg_glucose_level": float(data["avg_glucose_level"]),
+            "bmi": float(data["bmi"]),
+            "smoking_status": data["smoking_status"]
+        }
+
+        input_data["age_glucose_interaction"] = input_data["age"] * input_data["avg_glucose_level"]
+        input_df = pd.DataFrame([input_data])
+
+        prediction = model.predict_proba(input_df)[0][1]
+        risk = "High-risk" if prediction >= 0.7 else "Low-risk"
+
+        return jsonify({
+            'prediction': risk,
+            'probability': float(prediction)
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
 if __name__ == "__main__":
     app.run(debug=True)
-
