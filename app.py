@@ -131,7 +131,7 @@ def predict():
     prediction = model.predict([input_features])[0]
     probability = model.predict_proba([input_features])[0][prediction]
 
-    label = "High Stroke Risk" if prediction == 1 else "Low Stroke Risk"
+    risk = "High-risk" if probability >= 0.7 else "Low-risk"
     confidence = round(probability * 100, 2)
 
     with get_db_connection() as conn:
@@ -144,7 +144,7 @@ def predict():
         """, tuple(input_features + [prediction]))
         conn.commit()
 
-    return render_template("result.html", prediction=prediction, label=label, confidence=confidence)
+    return render_template("result.html", prediction=prediction, risk=risk, confidence=confidence)
 
 # Instructions page
 @app.route("/instructions")
