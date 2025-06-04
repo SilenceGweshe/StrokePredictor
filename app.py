@@ -1,22 +1,20 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 import joblib
 import sqlite3
-import os
-import pandas as pd
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 
-# Load the stroke prediction model    
+# Load the stroke prediction model
 model = joblib.load("stroke_model.pkl")
 
-# Connect to SQLite database
+# Database connection
 def get_db_connection():
     conn = sqlite3.connect("predictions.db")
     conn.row_factory = sqlite3.Row
     return conn
 
-# Initialize database tables
+# Initialize the database tables
 with get_db_connection() as conn:
     conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -40,17 +38,13 @@ with get_db_connection() as conn:
             prediction INTEGER
         )
     """)
-    conn.commit()
-
-# Add age_glucose_interaction column if it doesn't exist
-with get_db_connection() as conn:
     try:
         conn.execute("ALTER TABLE predictions ADD COLUMN age_glucose_interaction REAL")
         conn.commit()
     except sqlite3.OperationalError:
-        pass  # column already exists
+        pass  # Already exists
 
-# Welcome page
+# Home page
 @app.route("/")
 def welcome():
     return render_template("home.html")
@@ -93,10 +87,18 @@ def logout():
     flash("You have been logged out.")
     return redirect(url_for("login"))
 
-# Redirect forgot password to register
+# Forgot password redirects to register
 @app.route("/forgot_password")
 def forgot_password():
     return redirect(url_for("register"))
+
+# Instructions page
+@app.route("/instructions")
+def instructions():
+    if "user" not in session:
+        flash("Please login first.")
+        return redirect(url_for("login"))
+    return render_template("instructions.html")
 
 # Form page
 @app.route("/form")
@@ -106,7 +108,7 @@ def form():
         return redirect(url_for("login"))
     return render_template("form.html")
 
-# Prediction (HTML form submission)
+# Predict route
 @app.route("/predict", methods=["POST"])
 def predict():
     if "user" not in session:
@@ -129,10 +131,10 @@ def predict():
 
     # Make prediction
     prediction = model.predict([input_features])[0]
-    probability = model.predict_proba([input_features])[0][1]
+    probability = model.predict_proba([input_features])[0][1]  # Prob of stroke (class 1)
 
-    risk = "High-risk" if probability >= 0.7 else "Low-risk"
-    confidence = round(probability * 100, 2)
+   label = "High Stroke Risk" if confidence >= 70 else "Low Stroke Risk"
+    prediction = 1 if confidence >= 70 else 0  # Optional: store label as 1/0
 
     # Store in DB
     with get_db_connection() as conn:
@@ -145,46 +147,7 @@ def predict():
         """, tuple(input_features + [prediction]))
         conn.commit()
 
-    return render_template("result.html", prediction=prediction, risk=risk, confidence=confidence)
-
-# Instructions page
-@app.route("/instructions")
-def instructions():
-    return render_template("instructions.html")
-
-# JSON API prediction route
-@app.route("/api/predict", methods=["POST"])
-def api_predict():
-    if "user" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        data = request.json
-        input_data = {
-            "gender": data["gender"],
-            "age": float(data["age"]),
-            "hypertension": int(data["hypertension"]),
-            "heart_disease": int(data["heart_disease"]),
-            "work_type": data["work_type"],
-            "avg_glucose_level": float(data["avg_glucose_level"]),
-            "bmi": float(data["bmi"]),
-            "smoking_status": data["smoking_status"]
-        }
-
-        input_data["age_glucose_interaction"] = input_data["age"] * input_data["avg_glucose_level"]
-        input_df = pd.DataFrame([input_data])
-
-        probability = model.predict_proba(input_df)[0][1]
-        risk = "High-risk" if probability >= 0.7 else "Low-risk"
-
-        return jsonify({
-            "prediction": risk,
-            "probability": round(float(probability), 4)
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    return render_template("result.html", prediction=prediction, label=label, confidence=confidence)
 
 if __name__ == "__main__":
     app.run(debug=True)
-
