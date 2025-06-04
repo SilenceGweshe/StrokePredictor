@@ -38,7 +38,7 @@ with get_db_connection() as conn:
             prediction INTEGER
         )
     """)
-    # Add new column if it doesn't exist
+    # Add new column if it doesn't exist (safe to ignore error)
     try:
         conn.execute("ALTER TABLE predictions ADD COLUMN age_glucose_interaction REAL")
     except sqlite3.OperationalError:
@@ -129,11 +129,12 @@ def predict():
     age_glucose_interaction = data["age"] * data["avg_glucose_level"]
     input_features = list(data.values()) + [age_glucose_interaction]
 
-    # Get stroke risk confidence
+    # Predict raw prediction and probabilities
+    model_prediction = model.predict([input_features])[0]
     proba = model.predict_proba([input_features])[0]
-    stroke_risk_confidence = proba[1]  # confidence for class 1 (stroke)
+    stroke_risk_confidence = proba[1]  # probability of class 1 (stroke)
 
-    # Apply custom threshold
+    # Apply threshold of 0.7 confidence to classify
     if stroke_risk_confidence >= 0.7:
         prediction = 1
         label = "High Stroke Risk"
@@ -152,8 +153,12 @@ def predict():
         """, tuple(input_features + [prediction]))
         conn.commit()
 
-    return render_template("result.html", prediction=prediction, label=label, confidence=round(stroke_risk_confidence * 100, 2))
+    return render_template(
+        "result.html",
+        prediction=prediction,
+        label=label,
+        confidence=round(stroke_risk_confidence * 100, 2)
+    )
 
-# Run app
 if __name__ == "__main__":
     app.run(debug=True)
