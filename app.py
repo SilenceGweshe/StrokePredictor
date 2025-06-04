@@ -129,17 +129,17 @@ def predict():
     age_glucose_interaction = data["age"] * data["avg_glucose_level"]
     input_features = list(data.values()) + [age_glucose_interaction]
 
-    # Make prediction
-    prediction = model.predict([input_features])[0]
-    probability = model.predict_proba([input_features])[0][prediction]
-    confidence = probability  # between 0.0 - 1.0
+    # Get stroke risk confidence
+    proba = model.predict_proba([input_features])[0]
+    stroke_risk_confidence = proba[1]  # confidence for class 1 (stroke)
 
-    # Threshold at 0.7 (70%)
-    if confidence >= 0.7 and prediction == 1:
+    # Apply custom threshold
+    if stroke_risk_confidence >= 0.7:
+        prediction = 1
         label = "High Stroke Risk"
     else:
+        prediction = 0
         label = "Low Stroke Risk"
-        prediction == 0
 
     # Save to DB
     with get_db_connection() as conn:
@@ -152,7 +152,7 @@ def predict():
         """, tuple(input_features + [prediction]))
         conn.commit()
 
-    return render_template("result.html", prediction=prediction, label=label, confidence=round(confidence * 100, 2))
+    return render_template("result.html", prediction=prediction, label=label, confidence=round(stroke_risk_confidence * 100, 2))
 
 # Run app
 if __name__ == "__main__":
