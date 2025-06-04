@@ -129,7 +129,7 @@ def predict():
 
     # Make prediction
     prediction = model.predict([input_features])[0]
-    probability = model.predict_proba([input_features])[0][prediction]
+    probability = model.predict_proba([input_features])[0][1]
 
     risk = "High-risk" if probability >= 0.7 else "Low-risk"
     confidence = round(probability * 100, 2)
