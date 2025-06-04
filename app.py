@@ -139,7 +139,7 @@ def predict():
         label = "High Stroke Risk"
     else:
         label = "Low Stroke Risk"
-        prediction==0
+        prediction == 0
 
     # Save to DB
     with get_db_connection() as conn:
