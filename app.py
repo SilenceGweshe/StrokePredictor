@@ -42,7 +42,7 @@ with get_db_connection() as conn:
     """)
     conn.commit()
 
-# Add new column to existing predictions table if it doesn't exist
+# Add age_glucose_interaction column if it doesn't exist
 with get_db_connection() as conn:
     try:
         conn.execute("ALTER TABLE predictions ADD COLUMN age_glucose_interaction REAL")
@@ -106,7 +106,7 @@ def form():
         return redirect(url_for("login"))
     return render_template("form.html")
 
-# Prediction route (HTML form based)
+# Prediction (HTML form submission)
 @app.route("/predict", methods=["POST"])
 def predict():
     if "user" not in session:
@@ -134,6 +134,7 @@ def predict():
     risk = "High-risk" if probability >= 0.7 else "Low-risk"
     confidence = round(probability * 100, 2)
 
+    # Store in DB
     with get_db_connection() as conn:
         conn.execute("""
             INSERT INTO predictions (
@@ -173,12 +174,12 @@ def api_predict():
         input_data["age_glucose_interaction"] = input_data["age"] * input_data["avg_glucose_level"]
         input_df = pd.DataFrame([input_data])
 
-        prediction = model.predict_proba(input_df)[0][1]
-        risk = "High-risk" if prediction >= 0.7 else "Low-risk"
+        probability = model.predict_proba(input_df)[0][1]
+        risk = "High-risk" if probability >= 0.7 else "Low-risk"
 
         return jsonify({
-            'prediction': risk,
-            'probability': float(prediction)
+            "prediction": risk,
+            "probability": round(float(probability), 4)
         })
 
     except Exception as e:
