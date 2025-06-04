@@ -1,20 +1,21 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 import joblib
 import sqlite3
+import os
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 
-# Load the stroke prediction model
+# Load the stroke prediction model    
 model = joblib.load("stroke_model.pkl")
 
-# Database connection
+# Connect to SQLite database
 def get_db_connection():
     conn = sqlite3.connect("predictions.db")
     conn.row_factory = sqlite3.Row
     return conn
 
-# Initialize the database tables
+# Initialize database tables
 with get_db_connection() as conn:
     conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -38,13 +39,17 @@ with get_db_connection() as conn:
             prediction INTEGER
         )
     """)
+    conn.commit()
+
+# Add new column to existing predictions table if it doesn't exist
+with get_db_connection() as conn:
     try:
         conn.execute("ALTER TABLE predictions ADD COLUMN age_glucose_interaction REAL")
         conn.commit()
     except sqlite3.OperationalError:
-        pass  # Already exists
+        pass  # column already exists
 
-# Home page
+# Welcome page
 @app.route("/")
 def welcome():
     return render_template("home.html")
@@ -87,18 +92,10 @@ def logout():
     flash("You have been logged out.")
     return redirect(url_for("login"))
 
-# Forgot password redirects to register
+# Redirect forgot password to register
 @app.route("/forgot_password")
 def forgot_password():
     return redirect(url_for("register"))
-
-# Instructions page
-@app.route("/instructions")
-def instructions():
-    if "user" not in session:
-        flash("Please login first.")
-        return redirect(url_for("login"))
-    return render_template("instructions.html")
 
 # Form page
 @app.route("/form")
@@ -108,7 +105,7 @@ def form():
         return redirect(url_for("login"))
     return render_template("form.html")
 
-# Predict route
+# Prediction route
 @app.route("/predict", methods=["POST"])
 def predict():
     if "user" not in session:
@@ -131,12 +128,11 @@ def predict():
 
     # Make prediction
     prediction = model.predict([input_features])[0]
-    probability = model.predict_proba([input_features])[0][1]  # Prob of stroke (class 1)
+    probability = model.predict_proba([input_features])[0][prediction]
 
-   label = "High Stroke Risk" if confidence >= 70 else "Low Stroke Risk"
-    prediction = 1 if confidence >= 70 else 0  # Optional: store label as 1/0
+    if confidence is not None:
+    label = "High Stroke Risk" if confidence >= 70 else "Low Stroke Risk"
 
-    # Store in DB
     with get_db_connection() as conn:
         conn.execute("""
             INSERT INTO predictions (
@@ -149,5 +145,11 @@ def predict():
 
     return render_template("result.html", prediction=prediction, label=label, confidence=confidence)
 
+# Instructions page
+@app.route("/instructions")
+def instructions():
+    return render_template("instructions.html")
+
 if __name__ == "__main__":
     app.run(debug=True)
+
